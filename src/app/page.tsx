@@ -1,103 +1,208 @@
-import Image from "next/image";
+'use client'
+import Logo from "@/components/logo";
+import ThemeToggle from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import {
+  FileUpload,
+  FileUploadDropzone,
+  FileUploadItem,
+  FileUploadItemDelete,
+  FileUploadItemMetadata,
+  FileUploadItemPreview,
+  FileUploadList,
+} from "@/components/ui/file-upload";
+import { Upload, X } from "lucide-react";
+import * as React from "react";
+import { toast } from "sonner";
+import * as z from "zod";
+
+import { motion } from "motion/react";
+import { TextAnimate } from "@/components/magicui/text-animate";
+import { Meteors } from "@/components/ui/meteors";
+import { Scroller } from "@/components/ui/scroller";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FormControl, FormField, FormItem, Form } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+
+const mainVariant = {
+  initial: {
+    x: 0,
+    y: 0,
+  },
+  animate: {
+    x: 20,
+    y: -20,
+    opacity: 0.9,
+  },
+};
+
+const secondaryVariant = {
+  initial: {
+    opacity: 0,
+  },
+  animate: {
+    opacity: 1,
+  },
+};
+
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const formSchema = z.object({
+    files: z
+      .array(z.custom<File>())
+      .min(1, "Please select at least one file")
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  });
+  type FormValues = z.infer<typeof formSchema>;
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      files: [],
+    },
+  });
+
+  const onSubmit = React.useCallback((data: FormValues) => {
+    toast("Submitted values:", {
+      description: (
+        <pre className="mt-2 w-80 rounded-md bg-accent/30 p-4 text-accent-foreground">
+          <code>
+            {JSON.stringify(
+              data.files.map((file) =>
+                file.name.length > 25
+                  ? `${file.name.slice(0, 25)}...`
+                  : file.name,
+              ),
+              null,
+              2,
+            )}
+          </code>
+        </pre>
+      ),
+    });
+  }, []);
+
+
+  const animatedHeader = React.useMemo(() => (
+    <TextAnimate animation="blurInUp" by="character" once className="font-medium text-sm mt-4">
+      Drag & drop your file(s) here
+    </TextAnimate>
+  ), []);
+
+  const animatedCaption = React.useMemo(() => (
+    <div className="flex flex-col items-center gap-2">
+      <TextAnimate delay={1} animation="blurInUp" by="character" once className="text-xs text-muted-foreground">
+        Or click to browse.
+      </TextAnimate>
+      <TextAnimate delay={2} animation="blurInUp" by="character" once className="text-xs text-muted-foreground">
+        Supported formats: CSV, TSV
+      </TextAnimate>
     </div>
+  ), []);
+
+  const meteors = React.useMemo(() => (
+    <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+      <Meteors number={20} />
+    </div>
+  ), [])
+
+  return (
+    <main className="relative flex min-h-screen flex-col">
+
+
+      <header className="w-full flex items-center justify-between p-4">
+        <Logo full={false} />
+        <ThemeToggle />
+      </header>
+      <div className="flex-1 flex items-center justify-center">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-md">
+            <FormField
+              control={form.control}
+              name="files"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <FileUpload
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      accept=".csv, .tsv"
+                      onFileReject={(_, message) => {
+                        form.setError("files", {
+                          message,
+                        });
+                      }}
+                      multiple
+                    >
+                      <FileUploadDropzone className="w-full flex-col justify-between gap-10 hover:bg-transparent max-w-md">
+                        {meteors}
+                        {animatedHeader}
+
+                        {/* animated wrapper */}
+                        <div className="relative w-full ">
+                          <motion.div
+                            whileHover="animate"
+                          >
+
+                            {/* the “card” shadowed hover effect */}
+                            <motion.div
+                              layoutId="file-upload"
+                              variants={mainVariant}
+                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                              className="relative group-hover/file:shadow-2xl z-40 bg-white dark:bg-neutral-900 flex items-center justify-center h-32 w-full max-w-[8rem] mx-auto rounded-md shadow-[0px_10px_50px_rgba(0,0,0,0.1)]"
+                            >
+                              <Upload className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />
+                            </motion.div>
+
+                            {/* dashed overlay on hover */}
+                            <motion.div
+                              variants={secondaryVariant}
+                              className="absolute opacity-0 border border-dashed border-accent inset-0 z-30 bg-transparent flex items-center justify-center w-full max-w-[8rem] mx-auto rounded-md"
+                            />
+                          </motion.div>
+                        </div>
+
+                        {animatedCaption}
+                      </FileUploadDropzone>
+
+                      <div className="flex items-center justify-center w-full max-w-md flex-col">
+                        <Scroller className="flex w-full flex-col p-4 max-h-80 " hideScrollbar>
+                          <FileUploadList>
+                            {field.value.map((file, index) => (
+                              <FileUploadItem key={index} value={file}>
+                                <FileUploadItemPreview />
+                                <FileUploadItemMetadata />
+                                <FileUploadItemDelete asChild>
+                                  <Button variant="ghost" size="icon" className="size-7">
+                                    <X />
+                                  </Button>
+                                </FileUploadItemDelete>
+                              </FileUploadItem>
+                            ))}
+                          </FileUploadList>
+                        </Scroller>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: field.value.length > 0 ? 1 : 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="w-full"
+                        >
+                          <Button type="submit" className="w-full" disabled={field.value.length === 0}>
+                            Next step
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </FileUpload>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+          </form>
+        </Form>
+
+
+      </div>
+    </main>
   );
 }
