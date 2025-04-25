@@ -9,7 +9,6 @@ export default function Home() {
   return (
     <main className="relative flex min-h-screen flex-col">
 
-
       <header className="w-full flex items-center justify-between p-4">
         <Logo full={false} />
         <ThemeToggle />
