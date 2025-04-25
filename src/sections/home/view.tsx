@@ -1,6 +1,4 @@
 'use client'
-import Logo from "@/components/logo";
-import ThemeToggle from "@/components/theme-toggle";
 import * as React from "react";
 import FileSelectForm, { FormValues } from "./file-select-form";
 import { TextAnimate } from "@/components/magicui/text-animate";
@@ -10,6 +8,9 @@ import type { Table } from "apache-arrow"
 import { DataTable } from "./explorer-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { handleFileSubmit } from "./handle-file-submit";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SideBarForm } from "./side-bar-form";
+import { SiteHeader } from "./header";
 
 export default function Home() {
   const [columns, setColumns] = React.useState<ColumnDef<unknown>[]>([])
@@ -36,18 +37,21 @@ export default function Home() {
 
 
   return (
-    <main className="relative flex min-h-screen flex-col">
-      <header className="w-full flex items-center justify-between p-4">
-        <Logo full={false} />
-        <ThemeToggle />
-      </header>
-      <div className="flex-1 flex flex-col gap-10 items-center justify-center">
-        {welcomeMessage}
-        <FileSelectForm onSubmit={onSubmit} />
-      </div>
-      <div className="p-4 flex-1 flex flex-col gap-10 items-center justify-center">
-        {table && <DataTable columns={columns} data={table?.toArray() || []} loading={loading} />}
-      </div>
-    </main>
+      <SidebarProvider className="flex flex-col" defaultOpen={false}>
+        <SiteHeader />
+        <div className="flex flex-1">
+          <SidebarInset className="flex-1 flex flex-col gap-10 items-center justify-center">
+            <div className="flex flex-col items-center justify-center gap-10">
+              {welcomeMessage}
+              <FileSelectForm onSubmit={onSubmit} />
+            </div>
+            {table && <DataTable columns={columns} data={table?.toArray() || []} loading={loading} />}
+          </SidebarInset>
+          <SideBarForm side="right" />
+        </div>
+
+      </SidebarProvider>
+
+
   );
 }
