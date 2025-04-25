@@ -11,10 +11,10 @@ const DuckdbProvider = ({ children }: DuckDbProviderProps) => {
     useEffect(() => {
         const config: DuckDBConfig = {
             query: {
-                castBigIntToDouble: false,
+                castBigIntToDouble: true,
             },
         }
-        initializeDuckDb({ config, debug: false });
+        initializeDuckDb({ config, debug: true });
     }, []);
 
     return (

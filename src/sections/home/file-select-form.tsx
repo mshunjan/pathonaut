@@ -10,8 +10,7 @@ import {
     FileUploadList,
 } from "@/components/ui/file-upload";
 import { Upload, X } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import * as React from "react"; 
 import * as z from "zod";
 
 import { motion } from "motion/react";
@@ -45,40 +44,27 @@ const secondaryVariant = {
 };
 
 
-export default function FileSelectForm() {
-    const formSchema = z.object({
-        files: z
-            .array(z.custom<File>())
-            .min(1, "Please select at least one file")
+const formSchema = z.object({
+    files: z
+        .array(z.custom<File>())
+        .min(1, "Please select at least one file")
 
-    });
-    type FormValues = z.infer<typeof formSchema>;
+});
+
+export type FormValues = z.infer<typeof formSchema>;
+
+export interface FileSelectFormProps {
+    onSubmit: (data: FormValues) => void;
+}
+
+
+export default function FileSelectForm({onSubmit}: FileSelectFormProps) {
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             files: [],
         },
     });
-
-    const onSubmit = React.useCallback((data: FormValues) => {
-        toast("Submitted values:", {
-            description: (
-                <pre>
-                    <code>
-                        {JSON.stringify(
-                            data.files.map((file) =>
-                                file.name.length > 25
-                                    ? `${file.name.slice(0, 25)}...`
-                                    : file.name,
-                            ),
-                            null,
-                            2,
-                        )}
-                    </code>
-                </pre>
-            ),
-        });
-    }, []);
 
 
     const animatedHeader = React.useMemo(() => (
