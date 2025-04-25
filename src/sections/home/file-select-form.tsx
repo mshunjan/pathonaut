@@ -63,7 +63,7 @@ export default function FileSelectForm() {
     const onSubmit = React.useCallback((data: FormValues) => {
         toast("Submitted values:", {
             description: (
-                <pre className="mt-2 w-80 rounded-md bg-accent/30 p-4 text-accent-foreground">
+                <pre>
                     <code>
                         {JSON.stringify(
                             data.files.map((file) =>
