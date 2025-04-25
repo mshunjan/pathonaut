@@ -82,14 +82,14 @@ export default function FileSelectForm() {
 
 
     const animatedHeader = React.useMemo(() => (
-        <TextAnimate animation="blurInUp" by="character" once className="font-medium text-sm mt-4">
+        <TextAnimate delay={1} animation="blurInUp" by="character" once className="font-medium text-sm mt-4">
             Drag & drop your file(s) here
         </TextAnimate>
     ), []);
 
     const animatedCaption = React.useMemo(() => (
         <div className="flex flex-col items-center gap-2">
-            <TextAnimate delay={1} animation="blurInUp" by="character" once className="text-xs text-muted-foreground">
+            <TextAnimate delay={2} animation="blurInUp" by="character" once className="text-xs text-muted-foreground">
                 Or click to browse.
             </TextAnimate>
             <TextAnimate delay={2} animation="blurInUp" by="character" once className="text-xs text-muted-foreground">
