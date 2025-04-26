@@ -2,16 +2,12 @@ import { DuckDBDataProtocol } from "@duckdb/duckdb-wasm";
 import type { Table } from "apache-arrow";
 import type { AsyncDuckDB, } from "duckdb-wasm-kit";
 
-export interface FormValues {
-    files: File[];
-}
-
 /**
  * Handles file registration and querying for DuckDB, returning the resulting Arrow table and column definitions.
  */
 export async function handleFileSubmit(
     db: AsyncDuckDB | null,
-    data: FormValues
+    data: File[]
 ): Promise<{ table: Table; columns: { accessorKey: string; header: string; size: number; minSize: number; maxSize: number; }[] } | null> {
     if (!db) return null;
 
@@ -19,7 +15,7 @@ export async function handleFileSubmit(
 
     // Register each file for DuckDB reading
     await Promise.all(
-        data.files.map(file =>
+        data.map(file =>
             db.registerFileHandle(
                 file.name,
                 file,
@@ -30,7 +26,7 @@ export async function handleFileSubmit(
     );
 
     // Build a UNION ALL query for all CSVs
-    const unionSQL = data.files
+    const unionSQL = data
         .map(file => {
             const basename = file.name.replace(/\.[^/.]+$/, '');
             return `SELECT *, '${basename}' AS sample FROM read_csv_auto('${file.name}')`;

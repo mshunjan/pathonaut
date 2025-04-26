@@ -189,7 +189,7 @@ export function Combobox<T extends { id: string; name: string }>({
                                                 transform: `translateY(${virtualItem.start}px)`,
                                             }}
                                         >
-                                            {itemToString(item)}
+                                            <span className="truncate">{itemToString(item)}</span>
                                             <CheckSquare2Icon
                                                 className={cn(
                                                     "ml-auto h-4 w-4",
