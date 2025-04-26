@@ -64,7 +64,7 @@ export default function FormFileSelect({ name, ...props }: FormFileSelectProps) 
     ), []);
 
     const meteors = React.useMemo(() => (
-        <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <Meteors number={20} />
         </div>
     ), [])
