@@ -10,7 +10,6 @@ import FormInput from "@/components/form/form-text";
 export type SideBarFormProps = React.ComponentProps<typeof Sidebar>;
 
 export function SideBarForm({ ...props }: SideBarFormProps) {
-  // const { watch } = useFormContext();
 
   // // Watch the shared "data" array from the form
   // const selectedData: Array<File> = watch("files", []);
@@ -78,6 +77,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
             title="Select a panel"
             items={panelOptions}
             multiple={false}
+          
           />
 
           <FormCombobox

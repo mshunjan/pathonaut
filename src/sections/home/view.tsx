@@ -45,7 +45,7 @@ function HomeContent() {
     defaultValues: {
       files: [],
       selectedData: [],
-      toggleDetected: false,
+      toggleDetected: true,
       panel: "",
       pathogens: [],
       numericalThreshold: 0,
@@ -103,16 +103,37 @@ function HomeContent() {
       </div>
     ), [welcomeMessage]);
 
+    const { toggleDetected, pathogens, numericalThreshold, percentThreshold } = methods.watch();
+
+  const filteredData = React.useMemo(() => {
+    if (!table) return [];
+    const allRows = table.toArray();
+    if (!toggleDetected) return allRows;
+
+    return allRows.filter((row) => {
+      if (pathogens.length > 0 && !pathogens.includes(row.taxid)) {
+        return false;
+      }
+      if (row.numericAbundance < numericalThreshold) {
+        return false;
+      }
+      if (row.percentAbundance > percentThreshold) {
+        return false;
+      }
+      return true;
+    });
+  }, [table, toggleDetected,  pathogens, numericalThreshold, percentThreshold]);
+
   const dataTable = React.useMemo(
     () => (<div className="w-full flex-1 flex flex-col px-20 overflow-x-auto">
       <DataTable
         columns={columns}
-        data={table?.toArray() || []}
+        data={filteredData || []}
         loading={loading}
       />
     </div>
     ),
-    [columns, table, loading]
+    [columns, filteredData, loading]
   );
 
   return (
