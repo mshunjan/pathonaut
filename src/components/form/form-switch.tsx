@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 // Extend the Switch component props using React.ComponentPropsWithoutRef
 type FormSwitchProps = React.ComponentPropsWithoutRef<typeof Switch> & {
     name: string;
-    label: string;
+    label?: string;
     description?: string;
 };
 
@@ -30,7 +30,7 @@ export default function FormSwitch({
             name={name}
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>{label}</FormLabel>
+                    {label && <FormLabel>{label}</FormLabel>}
                     {description && <FormDescription>{description}</FormDescription>}
                     <FormControl>
                         <Switch

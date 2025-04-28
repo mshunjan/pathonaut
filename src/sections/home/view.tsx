@@ -29,8 +29,11 @@ function HomeContent() {
       .array(z.custom<File>())
       .min(1, "Please select at least one file"),
     selectedData: z
-      .array(z.custom<File>())
-
+      .array(z.custom<File>()),
+    panel: z.string(),
+    pathogens: z.array(z.string()),
+    toggleDetected: z.boolean(),
+    threshold: z.coerce.number().min(0).max(100),
   });
 
   type FormValues = z.infer<typeof formSchema>;
@@ -40,7 +43,11 @@ function HomeContent() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       files: [],
-      selectedData: []
+      selectedData: [],
+      toggleDetected: false,
+      panel: "",
+      pathogens: [],
+      threshold: 0,
     },
   });
 

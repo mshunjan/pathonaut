@@ -11,7 +11,7 @@ import { Combobox } from "../ui/combobox";
 
 type FormComboboxProps = React.ComponentPropsWithoutRef<typeof Combobox> & {
   name: string;
-  label: string;
+  label?: string;
   description?: string;
 };
 
@@ -29,7 +29,7 @@ export default function FormCombobox({
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
+          {label && <FormLabel>{label}</FormLabel>}
           {description && <FormDescription>{description}</FormDescription>}
           <FormControl>
             <Combobox {...props} {...field} />
