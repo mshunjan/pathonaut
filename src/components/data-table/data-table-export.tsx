@@ -46,7 +46,7 @@ export function DataTableExport<TData extends Record<string, unknown>>({
 
     return (
         <div className="data-table-export">
-            <Button className={"flex gap-2"} size={"sm"} variant={"outline"} onClick={handleExportCsv}>
+            <Button type="button" className={"flex gap-2"} size={"sm"} variant={"outline"} onClick={handleExportCsv}>
                 <DownloadIcon className="h-4 w-4 "/> Export
             </Button>
         </div>
