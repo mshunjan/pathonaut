@@ -33,7 +33,8 @@ function HomeContent() {
     panel: z.string(),
     pathogens: z.array(z.string()),
     toggleDetected: z.boolean(),
-    threshold: z.coerce.number().min(0).max(100),
+    numericalThreshold: z.coerce.number().min(0),
+    percentThreshold: z.coerce.number().min(0).max(100),
   });
 
   type FormValues = z.infer<typeof formSchema>;
@@ -47,7 +48,8 @@ function HomeContent() {
       toggleDetected: false,
       panel: "",
       pathogens: [],
-      threshold: 0,
+      numericalThreshold: 0,
+      percentThreshold: 0,
     },
   });
 

@@ -44,7 +44,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
 
   return (
     <Sidebar variant="floating" className="top-[var(--header-height)]" {...props}>
-      <SidebarContent className="flex flex-col gap-4 p-4">
+      <SidebarContent className="flex flex-col gap-10 p-4">
         {/* Combobox bound to RHF via internal FormField wiring */}
         {/* <FormCombobox
           name="selectedData"
@@ -59,34 +59,52 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
           }}
         /> */}
 
+        <div className="flex flex-col gap-4">
 
-        <FormLabel>
-          Pathogen(s)
-        </FormLabel>
-        <FormDescription>
-          Screen Individual pathogens or choose from a pre-selected panel of pathogens.
-        </FormDescription>
+          <FormLabel>
+            Pathogen(s)
+          </FormLabel>
+          <FormDescription>
+            Screen Individual pathogens or choose from a pre-selected panel of pathogens.
+          </FormDescription>
 
-        <div className="flex items-center space-x-2">
-          <FormSwitch name="toggleDetected" />
-          <FormLabel htmlFor="only-detected">Only detected</FormLabel>
+          <div className="flex items-center space-x-2">
+            <FormSwitch name="toggleDetected" />
+            <FormLabel htmlFor="only-detected">Only detected</FormLabel>
+          </div>
+
+          <FormCombobox
+            name="panel"
+            title="Select a panel"
+            items={panelOptions}
+            multiple={false}
+          />
+
+          <FormCombobox
+            name="pathogens"
+            title="Select pathogen(s)"
+            items={pathogenOptions}
+            multiple
+          />
+
+          <FormLabel>
+            Threshold(s)
+          </FormLabel>
+          <FormDescription>
+            Choose a minimum threshold for pathogen detection.
+          </FormDescription>
+          <div className="flex items-center space-x-2">
+            <FormInput
+              name="numericalThreshold"
+              label="Num (#)"
+              type="number" />
+
+            <FormInput
+              name="percentThreshold"
+              label="Percent (%)"
+              type="number" />
+          </div>
         </div>
-
-        <FormCombobox
-          name="panel"
-          title="Select a panel"
-          items={panelOptions}
-          multiple={false}
-        />
-
-        <FormCombobox
-          name="pathogens"
-          title="Select pathogen(s)"
-          items={pathogenOptions}
-          multiple
-        />
-
-        <FormInput name="threshold" label="Threshold" type="number"/>
 
         <SidebarSeparator className="my-4" />
 
