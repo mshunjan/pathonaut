@@ -7,41 +7,106 @@ import { FormDescription, FormLabel } from "@/components/ui/form";
 import { FormSwitch } from "@/components/form";
 import FormInput from "@/components/form/form-text";
 import { useFormContext } from "react-hook-form";
+import { useDuckDbQuery } from "duckdb-wasm-kit";
 
-const panelOptions = [
-  { id: "1", name: "Panel 1", pathogens: ["1", "3", "5"] },
-  { id: "2", name: "Panel 2", pathogens: ["2", "4", "6"] },
-  { id: "3", name: "Panel 3", pathogens: ["1", "2", "7"] },
-  { id: "4", name: "Panel 4", pathogens: ["3", "4", "8"] },
-];
+export interface Pathogen {
+  id: string;
+  name: string;
+}
 
-const pathogenOptions = [
-  { id: "1", name: "Pathogen 1", taxid: 1 },
-  { id: "2", name: "Pathogen 2", taxid: 2 },
-  { id: "3", name: "Pathogen 3", taxid: 3 },
-  { id: "4", name: "Pathogen 4", taxid: 4 },
-  { id: "5", name: "Pathogen 5", taxid: 5 },
-  { id: "6", name: "Pathogen 6", taxid: 6 },
-  { id: "7", name: "Pathogen 7", taxid: 7 },
-  { id: "8", name: "Pathogen 8", taxid: 8 },
-];
+export interface Panel {
+  id: string;
+  name: string;
+  pathogenIds: Set<string>; // IDs of pathogens in this panel
+}
+
+const APDB_RAW = "https://raw.githubusercontent.com/aligndx/apdb/main/panels.csv"; // Replace with your actual path
 
 export type SideBarFormProps = React.ComponentProps<typeof Sidebar>;
 
 export function SideBarForm({ ...props }: SideBarFormProps) {
+  // Use arrays for panel and pathogen options.
+  const [panelOptions, setPanelOptions] = React.useState<Panel[]>([]);
+  const [pathogenOptions, setPathogenOptions] = React.useState<Pathogen[]>([]);
+
   const { watch, setValue } = useFormContext();
   const selectedPanel = watch("panel");
-  
+
+  const panelSql = `
+    WITH unpivoted_data AS (
+        SELECT
+            TaxID,
+            panel_name,
+            panel_value
+        FROM read_csv_auto('${APDB_RAW}')
+        UNPIVOT (panel_value FOR panel_name IN (
+            "COVID-19",
+            "Human Pathogenic Viruses",
+            "CDC high-consequence viruses",
+            "WHO priority pathogens"
+        ))
+        WHERE panel_value = 'Y'
+    )
+    SELECT 
+        panel_name AS name, 
+        array_agg(TaxID) AS pathogenIds
+    FROM unpivoted_data
+    GROUP BY panel_name;
+  `;
+
+  const pathogenSql = `
+  SELECT Organism, TaxID from read_csv_auto('${APDB_RAW}');
+  `
+
+  const { arrow: panelArrow, loading: loadingPanels, error: panelError } = useDuckDbQuery(panelSql);
+  const { arrow: pathogenArrow, loading: loadingPathogens, error: pathogenError } = useDuckDbQuery(pathogenSql);
+
+  // Parse the panels, and from them derive the complete set of panel options.
   React.useEffect(() => {
-    if (selectedPanel && selectedPanel.pathogens) {
+    if (panelArrow) {
+      const rows = panelArrow.toArray ? panelArrow.toArray() : [];
+      const panels: Panel[] = rows.map((row: any) => ({
+        id: row.name, // using panel name as unique id
+        name: row.name,
+        pathogenIds: new Set(row.pathogenIds), // row.pathogenIds should be an array
+      }));
+      setPanelOptions(panels);
+    }
+  }, [panelArrow]);
+
+
+  // Parse the pathogens.
+  React.useEffect(() => {
+    if (pathogenArrow) {
+      const rows = pathogenArrow.toArray ? pathogenArrow.toArray() : [];
+      const pathogens: Pathogen[] = rows.map((row: any) => ({
+        id: row.TaxID, // using TaxID as unique id
+        name: row.Organism,
+      }));
+      setPathogenOptions(pathogens);
+    }
+  }, [pathogenArrow]);
+
+  // When the selected panel changes, update the form's "pathogens" value.
+  React.useEffect(() => {
+    if (selectedPanel && selectedPanel.pathogenIds) {
       const selectedPathogens = pathogenOptions.filter((option) =>
-        selectedPanel.pathogens.includes(option.id)
+        selectedPanel.pathogenIds.has(option.id)
       );
       setValue("pathogens", selectedPathogens);
     } else {
-      setValue("pathogens", []); // Clear selection if no panel selected.
+      setValue("pathogens", []); // Clear selection if no panel is selected.
     }
-  }, [selectedPanel, setValue]);
+  }, [selectedPanel, setValue, pathogenOptions]);
+
+  if (loadingPanels || loadingPathogens) {
+    return;
+  }
+
+  if (panelError || pathogenError) {
+    return <div>Error loading data: {
+      panelError?.message}</div>;
+  }
 
   return (
     <Sidebar variant="floating" className="top-[var(--header-height)]" {...props}>
@@ -67,7 +132,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
           <FormCombobox
             name="pathogens"
             title="Select pathogen(s)"
-            items={pathogenOptions}
+            items={pathogenOptions} // Always show all derived options.
             multiple
           />
 
