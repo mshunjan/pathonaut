@@ -8,6 +8,8 @@ import { FormSwitch } from "@/components/form";
 import FormInput from "@/components/form/form-text";
 import { useFormContext } from "react-hook-form";
 import { useDuckDbQuery } from "duckdb-wasm-kit";
+import { HelpCircleIcon } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 export interface Pathogen {
   id: string;
@@ -118,7 +120,42 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
     <Sidebar variant="floating" className="top-[var(--header-height)]" {...props}>
       <SidebarContent className="flex flex-col gap-10 p-4">
         <div className="flex flex-col gap-4">
-          <FormLabel>Pathogen(s)</FormLabel>
+          <FormLabel>
+            Pathogen(s)
+            <HoverCard>
+              <HoverCardTrigger>
+                <HelpCircleIcon className="h-4" />
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80 ">
+                <div className="flex justify-between space-x-4">
+                  <div className="flex flex-col gap-4 text-sm">
+                    <div>
+                      <strong className="font-semibold">Panels:</strong> Panels are pre-selected groups of pathogens curated for specific purposes. These are pulled from the{" "}
+                      <a
+                        href={APDB_RAW}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline hover:text-blue-600"
+                      >
+                        APDB
+                      </a>.
+                    </div>
+                    <div>
+                      <strong className="font-semibold">Organisms:</strong> Organisms are sourced from the Kraken index used to generate the panels. You can find more details at the{" "}
+                      <a
+                        href={KRAKEN_INDEX}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline hover:text-blue-600"
+                      >
+                        Kraken Index
+                      </a>.
+                    </div>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          </FormLabel>
           <FormDescription>
             Screen individual pathogens or choose from a pre-selected panel of pathogens.
           </FormDescription>
@@ -144,7 +181,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
 
           <FormLabel>Threshold(s)</FormLabel>
           <FormDescription>
-            Choose a minimum threshold for pathogen detection.
+            Choose a minimum inclusive threshold for pathogen detection.
           </FormDescription>
           <div className="flex items-center space-x-2">
             <FormInput name="numericalThreshold" label="Num (#)" type="number" />
