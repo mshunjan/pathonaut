@@ -17,40 +17,40 @@ export const Meteors = React.memo(
     number?: number;
     className?: string;
   }) => {
-    // 1) Screen‐width only for computing `left`, but you can
-    //    avoid state entirely by using CSS % instead.
-    const [screenWidth, setScreenWidth] = useState(() => window.innerWidth);
+    const [screenWidth, setScreenWidth] = useState<number | null>(null);
+
     useEffect(() => {
-      let id: number;
-      const handler = () => {
-        // debounce so you don’t flood renders
-        window.clearTimeout(id);
-        id = window.setTimeout(() => setScreenWidth(window.innerWidth), 150);
-      };
-      window.addEventListener("resize", handler);
+      // Ensure this runs only on the client
+      const updateScreenWidth = () => setScreenWidth(window.innerWidth);
+
+      updateScreenWidth(); // Set initial screen width
+      window.addEventListener("resize", updateScreenWidth);
+
       return () => {
-        window.removeEventListener("resize", handler);
-        window.clearTimeout(id);
+        window.removeEventListener("resize", updateScreenWidth);
       };
     }, []);
 
-    // 2) Generate meteor data ONCE when `number` changes
     const meteorData: MeteorDatum[] = useMemo(
       () =>
         Array.from({ length: number }, (_, idx) => ({
           key: `meteor-${idx}`,
-          xFactor: idx / number, // or Math.random()
+          xFactor: idx / number,
           delay: `${(Math.random() * 5).toFixed(2)}s`,
           duration: `${(Math.random() * 15 + 5).toFixed(2)}s`,
         })),
       [number]
     );
 
-    // 3) Stable Motion variants
     const containerVariants = useRef({
       initial: { opacity: 0 },
       animate: { opacity: 1 },
     }).current;
+
+    if (screenWidth === null) {
+      // Render nothing until the screen width is available
+      return null;
+    }
 
     return (
       <motion.div
@@ -60,10 +60,9 @@ export const Meteors = React.memo(
         transition={{ duration: 0.5 }}
       >
         {meteorData.map(({ key, xFactor, delay, duration }) => {
-          // compute left once per render based on debounced screenWidth
           const left = screenWidth
             ? xFactor * (screenWidth - 50)
-            : xFactor * 100 + "%";
+            : `${xFactor * 100}%`;
 
           return (
             <span
