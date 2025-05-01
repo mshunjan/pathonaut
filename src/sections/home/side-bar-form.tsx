@@ -21,6 +21,7 @@ export interface Panel {
 }
 
 const APDB_RAW = "https://raw.githubusercontent.com/aligndx/apdb/main/panels.csv"; // Replace with your actual path
+const KRAKEN_INDEX = "https://genome-idx.s3.amazonaws.com/kraken/pluspfp_08gb_20231009/inspect.txt"; // Replace with your actual path
 
 export type SideBarFormProps = React.ComponentProps<typeof Sidebar>;
 
@@ -55,8 +56,13 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
   `;
 
   const pathogenSql = `
-  SELECT Organism, TaxID from read_csv_auto('${APDB_RAW}');
-  `
+  SELECT 
+      column4 AS TaxID, 
+      trim(replace(replace(replace(column5, '[', ''), ']', ''), '''', '')) AS Organism
+  FROM read_csv_auto('${KRAKEN_INDEX}')
+  WHERE column3 IN ('S')
+  ORDER BY LOWER(trim(replace(replace(replace(column5, '[', ''), ']', ''), '''', '')));
+`;
 
   const { arrow: panelArrow, loading: loadingPanels, error: panelError } = useDuckDbQuery(panelSql);
   const { arrow: pathogenArrow, loading: loadingPathogens, error: pathogenError } = useDuckDbQuery(pathogenSql);

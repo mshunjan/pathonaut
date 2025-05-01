@@ -32,7 +32,12 @@ function HomeContent() {
     selectedData: z
       .array(z.custom<File>()),
     panel: z.string(),
-    pathogens: z.array(z.string()),
+    pathogens: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+      })
+    ),
     toggleDetected: z.boolean(),
     numericalThreshold: z.coerce.number().min(0),
     percentThreshold: z.coerce.number().min(0).max(100),
@@ -105,7 +110,7 @@ function HomeContent() {
       </div>
     ), [welcomeMessage]);
 
-    const { toggleDetected, pathogens, numericalThreshold, percentThreshold } = methods.watch();
+  const { toggleDetected, pathogens, numericalThreshold, percentThreshold } = methods.watch();
 
   const filteredData = React.useMemo(() => {
     if (!table) return [];
@@ -113,18 +118,21 @@ function HomeContent() {
     if (!toggleDetected) return allRows;
 
     return allRows.filter((row) => {
-      if (pathogens.length > 0 && !pathogens.includes(row.taxid)) {
+      if (
+        pathogens.length > 0 &&
+        !pathogens.some((p: { id: string }) => p.id === row.taxonomyId)
+      ) {
         return false;
       }
       if (row.numericAbundance < numericalThreshold) {
         return false;
       }
-      if (row.percentAbundance > percentThreshold) {
+      if (row.percentAbundance < percentThreshold) {
         return false;
       }
       return true;
     });
-  }, [table, toggleDetected,  pathogens, numericalThreshold, percentThreshold]);
+  }, [table, toggleDetected, pathogens, numericalThreshold, percentThreshold]);
 
   const dataTable = React.useMemo(
     () => (<div className="w-full flex-1 flex flex-col px-20 overflow-x-auto">

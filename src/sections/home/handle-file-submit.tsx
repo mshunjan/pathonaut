@@ -2,8 +2,16 @@ import { DuckDBDataProtocol } from "@duckdb/duckdb-wasm";
 import { Table } from "apache-arrow";
 import type { AsyncDuckDB } from "duckdb-wasm-kit";
 
-// Expected column names for headerless Kraken2 reports (in order):
-const HEADERLESS_NAMES = [
+// Header-less Kraken2 column order
+type ColumnOrder = [
+  "percentAbundance",
+  "numericAbundance",
+  "cladeReads",
+  "taxonomyLevel",
+  "taxonomyId",
+  "name"
+];
+const HEADERLESS_NAMES: ColumnOrder = [
   "percentAbundance",
   "numericAbundance",
   "cladeReads",
@@ -13,90 +21,163 @@ const HEADERLESS_NAMES = [
 ];
 
 // Synonyms for headered Bracken/Kraken reports
-const COLUMN_SYNONYMS: Record<string,string[]> = {
+const COLUMN_SYNONYMS: Record<string, string[]> = {
   name: ["name", "Name"],
   taxonomyId: ["taxonomy_id", "taxid", "taxon_id", "taxID", "tax_id"],
-  taxonomyLevel: ["taxonomy_level", "lvl", "level", "rank", "tax_rank", "taxlevel"],
-  numericAbundance: ["abundance", "num_reads", "count", "number_reads", "reads", "abundance_count"],
-  percentAbundance: ["percent", "percentage", "percent_abundance", "abundance_percent", "pct"]
+  taxonomyLevel: ["taxonomy_level", "taxonomy_lvl", "tax_lvl", "lvl", "level", "rank", "tax_rank", "taxlevel"],
+  numericAbundance: ["abundance", "num_reads", "count", "number_reads", "reads", "abundance_count", "new_est_reads", "reassigned_reads", "est_reads"],
+  percentAbundance: ["percent", "percentage", "percent_abundance", "abundance_percent", "pct", "fraction_total_reads"]
 };
 
-// Find a header matching any of the synonyms
-function findHeader(headers: string[], synonyms: string[]): string|null {
-  return synonyms
-    .map(s => headers.find(h => h.toLowerCase() === s.toLowerCase()))
-    .find(h => h != null) || null;
+// Utility: pick delimiter based on extension
+const getDelimiter = (fileName: string): string => fileName.endsWith(".tsv") ? "\t" : ",";
+
+// Utility: read first line of a file
+async function readFirstLine(file: File): Promise<string> {
+  const text = await file.text();
+  return text.split(/\r?\n/)[0] || "";
 }
 
-/**
- * Handles CSV/TSV submission for Kraken/Bracken reports, headered or not.
- * Uses DuckDB's `names` option to auto-assign columns if header=false.
- */
-export async function handleFileSubmit(
-  db: AsyncDuckDB | null,
-  files: File[]
-): Promise<{ table: Table; columns: { accessorKey: string; header: string; size: number; minSize: number; maxSize: number; }[] } | null> {
-  if (!db || files.length === 0) return null;
-  const conn = await db.connect();
-  await Promise.all(files.map(f => db.registerFileHandle(f.name, f, DuckDBDataProtocol.BROWSER_FILEREADER, true)));
+// Check if file has any known header (Kraken or Bracken)
+function hasKnownHeader(headers: string[]): boolean {
+  return Object.values(COLUMN_SYNONYMS).some(syns =>
+    syns.some(s => headers.map(h => h.toLowerCase()).includes(s.toLowerCase()))
+  );
+}
 
-  // Build per-file SELECT clauses
-  const selects = await Promise.all(files.map(async file => {
-    const basename = file.name.replace(/\.[^/.]+$/, '');
-    const delim = file.name.endsWith('.tsv') ? "\t" : ',';
-    const text = await file.text();  // to inspect header line synchronously in JS
-    const firstLine = text.split(/\r?\n/)[0] || '';
-    const headers = firstLine.split(delim).map(h => h.trim());
-    const hasHeader = Object.values(COLUMN_SYNONYMS).some(syns => findHeader(headers, syns) !== null);
+// Detect specifically a Bracken report by 'fraction_total_reads' header
+function isBrackenReport(headers: string[]): boolean {
+  return headers.map(h => h.toLowerCase()).includes("fraction_total_reads");
+}
 
-    if (hasHeader) {
-      // Map actual headers to our standard names via synonyms
-      const mappings = Object.fromEntries(
-        Object.entries(COLUMN_SYNONYMS).map(([key, syns]) => {
-          const match = findHeader(headers, syns)!;
-          return [key, match];
-        })
-      );
-      return `
+// Map each target key to actual header in file
+function mapHeaders(headers: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  for (const [key, syns] of Object.entries(COLUMN_SYNONYMS)) {
+    const found = syns.find(s => headers.map(h => h.toLowerCase()).includes(s.toLowerCase()));
+    if (!found) throw new Error(`Missing column for '${key}'. Expected one of: ${syns.join(', ')}`);
+    const actual = headers.find(h => h.toLowerCase() === found.toLowerCase())!;
+    mapping[key] = actual;
+  }
+  return mapping;
+}
+
+// Build SQL fragment and type info for each file
+async function buildSelectClause(file: File): Promise<{ sql: string; isBracken: boolean }> {
+  const basename = file.name.replace(/\.[^/.]+$/, '');
+  const delim = getDelimiter(file.name);
+  const firstLine = await readFirstLine(file);
+  const headers = firstLine.split(delim).map(h => h.trim());
+  const headered = hasKnownHeader(headers);
+  const bracken = headered && isBrackenReport(headers);
+
+  if (headered) {
+    const m = mapHeaders(headers);
+    return {
+      isBracken: bracken,
+      sql: `
         SELECT
-          '${basename}' AS sample,
-          "${mappings.name}" AS name,
-          "${mappings.taxonomyId}" AS taxonomyId,
-          "${mappings.taxonomyLevel}" AS taxonomyLevel,
-          "${mappings.numericAbundance}" AS numericAbundance,
-          "${mappings.percentAbundance}" AS percentAbundance
+          '${basename}'       AS sample,
+          "${m.name}"       AS name,
+          "${m.taxonomyId}" AS taxonomyId,
+          "${m.taxonomyLevel}" AS taxonomyLevel,
+          "${m.numericAbundance}" AS numericAbundance,
+          "${m.percentAbundance}" AS percentAbundance
         FROM read_csv_auto(
           '${file.name}',
           delim='${delim}',
           header=true
-        )
-      `;
-    } else {
-      // No header: let DuckDB assign names, then select the columns we care about
-      return `
-        SELECT
-          '${basename}' AS sample,
-          name,
-          taxonomyId,
-          taxonomyLevel,
-          numericAbundance,
-          percentAbundance
-        FROM read_csv(
-          '${file.name}',
-          delim='${delim}',
-          header=false,
-          names=${JSON.stringify(HEADERLESS_NAMES)}
-        )
-      `;
-    }
-  }));
+        )`
+    };
+  }
 
-  // Combine and execute
-  const sql = selects.join('\nUNION ALL\n');
-  const arrowTable: Table = await conn.query(sql);
+  // Fallback for header-less Kraken2
+  return {
+    isBracken: false,
+    sql: `
+      SELECT
+        '${basename}'          AS sample,
+        name                 AS name,
+        taxonomyId           AS taxonomyId,
+        taxonomyLevel        AS taxonomyLevel,
+        numericAbundance     AS numericAbundance,
+        percentAbundance     AS percentAbundance
+      FROM read_csv(
+        '${file.name}',
+        delim='${delim}',
+        header=false,
+        names=${JSON.stringify(HEADERLESS_NAMES)}
+      )`
+  };
+}
+
+/**
+ * Processes a batch of files—either all Kraken2 or all Bracken.
+ * Throws if mixed.
+ */
+export async function handleFileSubmit(
+  db: AsyncDuckDB | null,
+  files: File[]
+): Promise<{
+  table: Table;
+  columns: { accessorKey: string; header: string; size: number; minSize: number; maxSize: number; }[];
+} | null> {
+  if (!db || files.length === 0) return null;
+
+  const conn = await db.connect();
+  await Promise.all(
+    files.map(f => db.registerFileHandle(f.name, f, DuckDBDataProtocol.BROWSER_FILEREADER, true))
+  );
+
+  // Build clauses and detect types
+  const clausesInfo = await Promise.all(files.map(buildSelectClause));
+  const hasBracken = clausesInfo.some(c => c.isBracken);
+  const hasKraken = clausesInfo.some(c => !c.isBracken);
+  if (hasBracken && hasKraken) {
+    throw new Error("Cannot mix Kraken2 and Bracken reports in one batch—please upload only one type at a time.");
+  }
+
+  const unionSQL = clausesInfo.map(c => c.sql).join("\nUNION ALL\n");
+  const allBracken = hasBracken;
+
+  // Choose normalization only for Kraken2
+  const normalizedSQL = allBracken
+    ? `
+      WITH raw AS (
+        ${unionSQL}
+      )
+      SELECT
+        sample,
+        name,
+        taxonomyId,
+        taxonomyLevel,
+        numericAbundance,
+        percentAbundance
+      FROM raw
+      WHERE taxonomyLevel = 'S'
+    `
+    : `
+      WITH raw AS (
+        ${unionSQL}
+      )
+      SELECT
+        sample,
+        name,
+        taxonomyId,
+        taxonomyLevel,
+        numericAbundance,
+        ROUND(
+          100.0 * numericAbundance
+            / SUM(numericAbundance) OVER (PARTITION BY sample),
+          2
+        ) AS percentAbundance
+      FROM raw
+      WHERE taxonomyLevel = 'S'
+    `;
+
+  const arrowTable: Table = await conn.query(normalizedSQL);
   await conn.close();
 
-  // Define columns for UI
   const columns = [
     { accessorKey: 'sample', header: 'Sample', size: 100, minSize: 50, maxSize: 200 },
     { accessorKey: 'name', header: 'Name', size: 100, minSize: 50, maxSize: 200 },
