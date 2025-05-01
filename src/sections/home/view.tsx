@@ -21,6 +21,7 @@ function HomeContent() {
   const { db, loading: dbLoading, error } = useDuckDb();
   const [table, setTable] = React.useState<Table | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [firstStepTriggered, setFirstStepTriggered] = React.useState(false);
 
   const { toggleSidebar } = useSidebar();
 
@@ -57,7 +58,7 @@ function HomeContent() {
     async (data: FormValues) => {
 
       // Check if any files are selected
-      if (data.files.length > 0) {
+      if (data.files.length > 0 && firstStepTriggered == false) {
         if (!db || dbLoading || error) return;
 
         setLoading(true);
@@ -67,6 +68,7 @@ function HomeContent() {
           setColumns(result.columns);
           toast.success("Table loaded successfully");
           toggleSidebar()
+          setFirstStepTriggered(true)
         }
         else {
           toast.error("Table could not be loaded");
@@ -75,7 +77,7 @@ function HomeContent() {
       }
 
     },
-    [db, dbLoading, error, toggleSidebar]
+    [db, dbLoading, error, toggleSidebar, firstStepTriggered]
   );
 
   const welcomeMessage = React.useMemo(

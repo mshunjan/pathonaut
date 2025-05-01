@@ -7,12 +7,6 @@ export const useColumns = () => {
 
   const columns: ColumnDef<unknown>[] = [
     {
-      accessorKey: "submission",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Submission" />
-      ),
-    },
-    {
       accessorKey: "sample",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Sample" />
@@ -25,27 +19,27 @@ export const useColumns = () => {
       ),
     },
     {
-      accessorKey: "taxonomy_id",
+      accessorKey: "taxonomyId",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Taxonomy ID" />
       ),
     },
     {
-      accessorKey: "taxonomy_lvl",
+      accessorKey: "taxonomyLevel",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Taxonomy Level" />
       ),
     },
     {
-      accessorKey: "abundance_num",
+      accessorKey: "numericAbundance",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Numerical Abundance" />
       ),
     },
     {
-      accessorKey: "abundance_frac",
+      accessorKey: "percentAbundance",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Fractional Abundance" />
+        <DataTableColumnHeader column={column} title="Percent Abundance" />
       ),
     },
   ]
