@@ -73,7 +73,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
   React.useEffect(() => {
     if (panelArrow) {
       const rows = panelArrow.toArray ? panelArrow.toArray() : [];
-      const panels: Panel[] = rows.map((row: any) => ({
+      const panels: Panel[] = rows.map((row: { name: string; pathogenIds: string[] }) => ({
         id: row.name, // using panel name as unique id
         name: row.name,
         pathogenIds: new Set(row.pathogenIds), // row.pathogenIds should be an array
@@ -87,7 +87,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
   React.useEffect(() => {
     if (pathogenArrow) {
       const rows = pathogenArrow.toArray ? pathogenArrow.toArray() : [];
-      const pathogens: Pathogen[] = rows.map((row: any) => ({
+      const pathogens: Pathogen[] = rows.map((row: { TaxID: string; Organism: string }) => ({
         id: row.TaxID, // using TaxID as unique id
         name: row.Organism,
       }));
