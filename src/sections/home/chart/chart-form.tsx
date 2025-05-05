@@ -1,4 +1,4 @@
-import { cn, getCssVariableValue } from "@/lib/utils";
+import { getCssVariableValue } from "@/lib/utils";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import BarPlot from "./bar-plot";
