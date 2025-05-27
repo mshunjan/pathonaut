@@ -39,3 +39,17 @@ export const capitalize = (str: string) => {
   const restOfLetters = str.slice(1)
   return firstletter + restOfLetters
 }
+
+export const getCssVariableValue = (variableName: string) => {
+  if (typeof document === "undefined") return "";
+  
+  const rawValue = getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim();
+
+  // Check if the value is a valid hsl color value (space-separated HSL parts)
+  if (rawValue && rawValue.includes(" ")) {
+    return `hsl(${rawValue})`; // Convert the HSL components into a valid hsl() string
+  }
+  return rawValue;
+};
