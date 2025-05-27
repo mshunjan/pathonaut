@@ -16,24 +16,28 @@ const heatmapPlotSchema = z.object({
     tip: z.boolean().optional(),
 });
 
-const generateHeatmapPlot = (data: any, formData: any, chartRef: React.RefObject<HTMLDivElement>) => {
+const generateHeatmapPlot = (
+    data: Record<string, unknown>[],
+    formData: FormDefaults,
+    chartRef: React.RefObject<HTMLDivElement>
+) => {
     generateBasePlot(data, formData, chartRef, {
         color: { legend: true },
-        marks: [Plot.cell(data, formData as Plot.CellOptions)],
+        marks: [Plot.cell(data, {
+            x: formData.x,
+            y: formData.y,
+            fill: formData.fill,
+            ...(formData.tip && { tip: true })
+        } as Plot.CellOptions)],
     });
 };
 
-type FormDefaults = {
-    x: string;
-    y: string;
-    fill: string;
-    tip: boolean;
-}
+type FormDefaults = z.infer<typeof heatmapPlotSchema>;
 
-interface HeatmapPlotProps extends React.HTMLProps<HTMLFormElement> {
-    data: any;
+type HeatmapPlotProps = Omit<React.HTMLProps<HTMLFormElement>, 'data'> & {
+    data: Record<string, unknown>[];
     formDefaults: FormDefaults;
-    chartRef: React.RefObject<HTMLDivElement>
+    chartRef: React.RefObject<HTMLDivElement>;
 }
 
 const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ data, formDefaults, chartRef, className, ...props }) => {

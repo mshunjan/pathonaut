@@ -16,25 +16,29 @@ const bubblePlotSchema = z.object({
     fillOpacity: z.number().min(0).max(1).optional(),
 });
 
-const generateBubblePlot = (data: any, formData: any, chartRef: React.RefObject<HTMLDivElement>) => {
+const generateBubblePlot = (
+    data: Record<string, unknown>[],
+    formData: FormDefaults,
+    chartRef: React.RefObject<HTMLDivElement>
+) => {
     generateBasePlot(data, formData, chartRef, {
-        marks: [Plot.dot(data, formData as Plot.DotOptions)],
+        marks: [Plot.dot(data, {
+            x: formData.x,
+            y: formData.y,
+            r: formData.r,
+            ...(formData.fill && { fill: formData.fill }),
+            ...(formData.tip && { tip: true }),
+            fillOpacity: formData.fillOpacity
+        } as Plot.DotOptions)],
     });
 };
 
-type FormDefaults = {
-    x: string;
-    y: string;
-    r: string;
-    fill: string;
-    tip: boolean;
-    fillOpacity: number;
-}
+type FormDefaults = z.infer<typeof bubblePlotSchema>;
 
-interface BubblePlotProps extends React.HTMLProps<HTMLFormElement> {
-    data: any;
+type BubblePlotProps = Omit<React.HTMLProps<HTMLFormElement>, 'data'> & {
+    data: Record<string, unknown>[];
     formDefaults: FormDefaults;
-    chartRef: React.RefObject<HTMLDivElement>
+    chartRef: React.RefObject<HTMLDivElement>;
 }
 
 const BubblePlot: React.FC<BubblePlotProps> = ({ data, formDefaults, chartRef, className, ...props }) => {

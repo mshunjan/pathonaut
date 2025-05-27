@@ -1,4 +1,4 @@
-export const handlePlotExport = (chartRef : any) => {
+export const handlePlotExport = (chartRef: React.RefObject<HTMLDivElement>) => {
     if (chartRef.current) {
         const svgElements = chartRef.current.querySelectorAll('svg');
 
@@ -9,7 +9,7 @@ export const handlePlotExport = (chartRef : any) => {
             let totalHeight = 0;
 
             // Iterate over each SVG element and combine them while preserving their layout
-            svgElements.forEach((svgElement: { cloneNode: (arg0: boolean) => SVGElement; getBoundingClientRect: () => any; }, index: any) => {
+            svgElements.forEach((svgElement) => {
                 const clonedSvgElement = svgElement.cloneNode(true) as SVGElement;
                 const svgString = serializer.serializeToString(clonedSvgElement);
 
