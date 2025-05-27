@@ -21,7 +21,7 @@ const options = [
 
 const barDefaults = {
     x: "sample",
-    y: "abundance_frac",
+    y: "percentAbundance",
     fill: "name",
     tip: true,
 }
@@ -29,7 +29,7 @@ const barDefaults = {
 const bubbleDefaults = {
     x: "sample",
     y: "name",
-    r: "abundance_frac",
+    r: "percentAbundance",
     fill: getCssVariableValue("--primary"),
     fillOpacity: 0.5,
     tip: true,
@@ -38,7 +38,7 @@ const bubbleDefaults = {
 const heatmapDefaults = {
     x: "sample",
     y: "name",
-    fill: "abundance_frac",
+    fill: "percentAbundance",
     tip: true,
 }
 

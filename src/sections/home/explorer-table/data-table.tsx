@@ -23,6 +23,7 @@ import {
 import React from "react"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableExport, DataTableViewOptions } from "@/components/data-table";
+import { DataTableVisualize } from "./data-table-visualize";
 
 interface DataTableProps<TData extends { id: string }, TValue>
     extends React.HTMLAttributes<HTMLTableElement> {
@@ -63,7 +64,7 @@ export function DataTable<TData extends { id: string }, TValue>({
     return (
         <div className="h-[36rem]">
             <div className="flex px-6 py-2 justify-between ">
-                <div />
+                <DataTableVisualize table={table} />
                 <div className="flex gap-2">
                     <DataTableExport table={table} />
                     <DataTableViewOptions table={table} />

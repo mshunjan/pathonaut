@@ -55,7 +55,7 @@ function HomeContent() {
       panel: "",
       pathogens: [],
       numericalThreshold: 0,
-      percentThreshold: 0,
+      percentThreshold: 1,
     },
   });
 
