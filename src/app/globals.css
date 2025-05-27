@@ -65,6 +65,9 @@
 :root {
   --radius: 0.625rem;
   --header-height: theme(spacing.14);
+  --tooltip-bg: var(--popover); /* Light mode background */
+  --tooltip-text: var(--popover-foreground); /* Light mode text */
+  --tooltip-shadow: rgba(0, 0, 0, 0.1); /* Light mode shadow */
   --background: oklch(0.98 0.005 270);
   --foreground: oklch(0.18 0.01 270);
   --card: oklch(1 0 0);
@@ -99,6 +102,9 @@
 }
 
 .dark {
+  --tooltip-bg: var(--card); /* Dark mode background */
+  --tooltip-text: var(--card-foreground); /* Dark mode text */
+  --tooltip-shadow: rgba(0, 0, 0, 0.5); /* Dark mode shadow */
   --background: oklch(0.15 0.01 270);
   --foreground: oklch(0.97 0.01 270);
   --card: oklch(0.2 0.01 270);
@@ -138,6 +144,16 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+  }
+
+  /* Tooltip styles for SVG elements */
+  [aria-label="tip"] path {
+    fill: var(--tooltip-bg) !important;
+    filter: drop-shadow(0 3px 4px var(--tooltip-shadow)) !important;
+  }
+
+  [aria-label="tip"] text {
+    fill: var(--tooltip-text) !important;
   }
 }
 

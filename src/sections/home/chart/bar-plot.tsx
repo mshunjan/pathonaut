@@ -16,23 +16,31 @@ const barPlotSchema = z.object({
     tip: z.boolean().optional(),
 });
 
-const generateBarPlot = (data: any, formData: any, chartRef: React.RefObject<HTMLDivElement>) => {
+const generateBarPlot = (
+    data: Record<string, unknown>[],
+    formData: FormDefaults,
+    chartRef: React.RefObject<HTMLDivElement>
+) => {
     generateBasePlot(data, formData, chartRef, {
-        marks: [Plot.barY(data, formData as Plot.BarYOptions)], // Bar-specific mark
-        color: { legend: true },
-
+        marks: [Plot.barY(data, {
+            x: formData.x,
+            y: formData.y,
+            ...(formData.fill && { fill: formData.fill }),
+            ...(formData.tip && { tip: true })
+        } as Plot.BarYOptions)],
+        color: { legend: true }
     });
 };
 
 type FormDefaults = {
     x: string;
     y: string;
-    fill: string;
-    tip: boolean;
+    fill?: string;
+    tip?: boolean;
 }
 
-interface BarPlotProps extends React.HTMLProps<HTMLFormElement> {
-    data: any;
+interface BarPlotProps extends React.ComponentProps<"form"> {
+    data: Record<string, unknown>[];
     formDefaults: FormDefaults;
     chartRef: React.RefObject<HTMLDivElement>
 }

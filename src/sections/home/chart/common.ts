@@ -1,5 +1,18 @@
 import * as Plot from "@observablehq/plot";
 
+// Utility types for chart data and form data
+export type ChartData = Record<string, unknown>[];
+export type ChartFormData = {
+    x: string;
+    y: string;
+    [key: string]: unknown;
+};
+
+export type ColumnOption = {
+    value: string;
+    label: string;
+};
+
 // Utility Function to measure the width of text in pixels
 const measureTextWidth = (text: string, fontSize = "12px", fontFamily = "Arial") => {
     const canvas = document.createElement("canvas");
@@ -60,8 +73,8 @@ const calculateMargins = (
 
 // Utility to create a base plot with rotated tick labels
 export const generateBasePlot = (
-    data: any,
-    formData: any,
+    data: ChartData,
+    formData: ChartFormData,
     chartRef: React.RefObject<HTMLDivElement>,
     plotOptions: Plot.PlotOptions
 ) => {
@@ -71,8 +84,8 @@ export const generateBasePlot = (
     const containerWidth = container.clientWidth; // Get container width
 
     // Extract axis labels
-    const xAxisLabels = data.map((row: any) => row[formData.x]);
-    const yAxisLabels = data.map((row: any) => String(row[formData.y]));
+    const xAxisLabels = data.map((row) => String(row[formData.x]));
+    const yAxisLabels = data.map((row) => String(row[formData.y]));
 
     const margins = calculateMargins(xAxisLabels, yAxisLabels, containerWidth);
 
@@ -86,7 +99,7 @@ export const generateBasePlot = (
 };
 
 // Function to extract column options from the dataset
-export const getColumnOptions = (data: any) => {
+export const getColumnOptions = (data: ChartData): ColumnOption[] => {
     const columns = data.length > 0 ? Object.keys(data[0]) : [];
     return columns.map((col) => ({ value: col, label: col }));
 };

@@ -7,24 +7,27 @@ import BubblePlot from "./bubble-plot";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { handlePlotExport } from "./actions";
+import { ChartData } from "./common";
 
-interface ChartFormProps extends React.HTMLProps<HTMLDivElement> {
-    data: any;
+interface ChartFormProps extends Omit<React.HTMLProps<HTMLDivElement>, 'data'> {
+    data: ChartData;
     chartRef: React.RefObject<HTMLDivElement>;
 }
 
-const options = [
+type ChartType = "bar" | "bubble" | "heatmap";
+
+const options: Array<{ value: ChartType; label: string }> = [
     { value: "bar", label: "Bar" },
     { value: "bubble", label: "Bubble" },
     { value: "heatmap", label: "Heatmap" },
-]
+];
 
 const barDefaults = {
     x: "sample",
     y: "percentAbundance",
     fill: "name",
     tip: true,
-}
+} as const;
 
 const bubbleDefaults = {
     x: "sample",
@@ -33,21 +36,23 @@ const bubbleDefaults = {
     fill: getCssVariableValue("--primary"),
     fillOpacity: 0.5,
     tip: true,
-};
+} as const;
 
 const heatmapDefaults = {
     x: "sample",
     y: "name",
     fill: "percentAbundance",
     tip: true,
-}
+} as const;
 
 
 
 const ChartForm: React.FC<ChartFormProps> = ({ data, chartRef, ...props }) => {
-    const [value, setValue] = useState<string>(options[0].value);
+    const [value, setValue] = useState<ChartType>(options[0].value);
 
-    const handleSelectChange = (innerValue: string) => { setValue(innerValue) }
+    const handleSelectChange = (innerValue: ChartType) => {
+        setValue(innerValue);
+    };
 
     const renderChart = () => {
         switch (value) {
@@ -60,7 +65,7 @@ const ChartForm: React.FC<ChartFormProps> = ({ data, chartRef, ...props }) => {
             default:
                 return null;
         }
-    }
+    };
 
     return (
         <div {...props}>
@@ -72,7 +77,7 @@ const ChartForm: React.FC<ChartFormProps> = ({ data, chartRef, ...props }) => {
                 <SelectContent>
                     <SelectGroup>
                         {options.map((option) => (
-                            <SelectItem key={option.value} value={String(option.value)}>
+                            <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                             </SelectItem>
                         ))}
@@ -84,7 +89,7 @@ const ChartForm: React.FC<ChartFormProps> = ({ data, chartRef, ...props }) => {
             <SelectSeparator />
             <Button variant="outline" onClick={() => handlePlotExport(chartRef)}>Export</Button>
         </div>
-    )
-}
+    );
+};
 
 export default ChartForm;
