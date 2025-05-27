@@ -15,11 +15,11 @@ import { ChartContainer, ChartForm } from "../chart";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { BarChart, X } from "lucide-react";
 
-interface DataTableVisualizeProps<TData> {
+interface DataTableVisualizeProps<TData extends Record<string, unknown>> {
   table: Table<TData>;
 }
 
-export function DataTableVisualize<TData>({ table }: DataTableVisualizeProps<TData>) {
+export function DataTableVisualize<TData extends Record<string, unknown>>({ table }: DataTableVisualizeProps<TData>) {
   const chartRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const isMobile = useMediaQuery("sm", "down");
 
