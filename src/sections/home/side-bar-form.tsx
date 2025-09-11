@@ -211,7 +211,7 @@ const SideBarFormComponent: React.FC<SideBarFormProps> = (props) => {
           </FormDescription>
           <div className="flex items-center space-x-2">
             <FormInput name="numericalThreshold" label="Num (#)" type="number" inputMode="numeric" min={0} step="1" />
-            <FormInput name="percentThreshold" label="Percent (%)" type="number" inputMode="numeric" min={0} max={100} step="0.01" />
+            <FormInput name="percentThreshold" label="Percent (%)" type="number" inputMode="numeric" min={0} max={100} step={1} />
           </div>
         </div>
 
