@@ -21,18 +21,23 @@ import { SideBarForm } from "./side-bar-form";
 // Form schema
 // -------------------------
 // The panel field can be a string (id) or the full object depending on FormCombobox settings.
-const PanelSchema = z.union([
-  z.string(),
-  z.object({ id: z.string(), name: z.string(), pathogenIds: z.array(z.string()).optional() })
-]);
 
 const PathogenSchema = z.object({ id: z.string(), name: z.string() });
+
+const PanelSchema = z.union([
+  z.string(),
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    pathogenIds: z.array(z.string()).optional(),
+  }),
+]).nullable(); // <- allow null
 
 const formSchema = z.object({
   files: z.array(z.custom<File>()).min(1, "Please select at least one file"),
   selectedData: z.array(z.custom<File>()),
   panel: PanelSchema,
-  pathogens: z.array(PathogenSchema),
+  pathogens: PathogenSchema.array(),
   toggleDetected: z.boolean(),
   numericalThreshold: z.coerce.number().min(0),
   percentThreshold: z.coerce.number().int().min(0).max(100),
@@ -55,7 +60,7 @@ function HomeContent() {
       files: [],
       selectedData: [],
       toggleDetected: true,
-      panel: "",
+      panel: null,
       pathogens: [],
       numericalThreshold: 1,
       percentThreshold: 0,
