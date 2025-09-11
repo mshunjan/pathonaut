@@ -19,101 +19,126 @@ export interface Pathogen {
 export interface Panel {
   id: string;
   name: string;
-  pathogenIds: Set<string>; // IDs of pathogens in this panel
+  /** IDs of pathogens in this panel */
+  pathogenIds: string[];
 }
 
-const APDB_RAW = "https://raw.githubusercontent.com/aligndx/apdb/main/panels.csv"; // Replace with your actual path
-const KRAKEN_INDEX = "https://genome-idx.s3.amazonaws.com/kraken/pluspfp_08gb_20231009/inspect.txt"; // Replace with your actual path
+// -------------------------
+// Constants & SQL (stable)
+// -------------------------
+const APDB_RAW_URL =
+  "https://raw.githubusercontent.com/aligndx/apdb/main/panels.csv" as const;
+const KRAKEN_INDEX_URL =
+  "https://genome-idx.s3.amazonaws.com/kraken/pluspfp_08gb_20231009/inspect.txt" as const;
+
+// Cast to VARCHAR to guarantee string IDs that match form items
+const PANEL_SQL = `
+  WITH unpivoted_data AS (
+    SELECT
+      CAST(TaxID AS VARCHAR) AS TaxID,
+      panel_name,
+      panel_value
+    FROM read_csv_auto('${APDB_RAW_URL}')
+    UNPIVOT (panel_value FOR panel_name IN (
+      "COVID-19",
+      "Human Pathogenic Viruses",
+      "CDC high-consequence viruses",
+      "WHO priority pathogens"
+    ))
+    WHERE panel_value = 'Y'
+  )
+  SELECT 
+    panel_name AS name,
+    array_agg(TaxID) AS pathogenIds
+  FROM unpivoted_data
+  GROUP BY panel_name;
+`;
+
+const PATHOGEN_SQL = `
+  SELECT 
+    CAST(column4 AS VARCHAR) AS TaxID,
+    trim(replace(replace(replace(column5, '[', ''), ']', ''), '\''', '')) AS Organism
+  FROM read_csv_auto('${KRAKEN_INDEX_URL}')
+  WHERE column3 IN ('S')
+  ORDER BY LOWER(trim(replace(replace(replace(column5, '[', ''), ']', ''), '\''', '')));
+`;
 
 export type SideBarFormProps = React.ComponentProps<typeof Sidebar>;
 
-export function SideBarForm({ ...props }: SideBarFormProps) {
-  // Use arrays for panel and pathogen options.
-  const [panelOptions, setPanelOptions] = React.useState<Panel[]>([]);
-  const [pathogenOptions, setPathogenOptions] = React.useState<Pathogen[]>([]);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function useArrowRows<T = any>(arrow: any): T[] {
+  return React.useMemo(() => {
+    try {
+      if (!arrow || typeof arrow.toArray !== "function") return [] as T[];
+      return arrow.toArray() as T[];
+    } catch {
+      return [] as T[];
+    }
+  }, [arrow]) as T[];
+}
 
+const SideBarFormComponent: React.FC<SideBarFormProps> = (props) => {
   const { watch, setValue } = useFormContext();
-  const selectedPanel = watch("panel");
 
-  const panelSql = `
-    WITH unpivoted_data AS (
-        SELECT
-            TaxID,
-            panel_name,
-            panel_value
-        FROM read_csv_auto('${APDB_RAW}')
-        UNPIVOT (panel_value FOR panel_name IN (
-            "COVID-19",
-            "Human Pathogenic Viruses",
-            "CDC high-consequence viruses",
-            "WHO priority pathogens"
-        ))
-        WHERE panel_value = 'Y'
-    )
-    SELECT 
-        panel_name AS name, 
-        array_agg(TaxID) AS pathogenIds
-    FROM unpivoted_data
-    GROUP BY panel_name;
-  `;
+  // Run queries
+  const {
+    arrow: panelArrow,
+    loading: panelsLoading,
+    error: panelsError,
+  } = useDuckDbQuery(PANEL_SQL);
 
-  const pathogenSql = `
-  SELECT 
-      column4 AS TaxID, 
-      trim(replace(replace(replace(column5, '[', ''), ']', ''), '''', '')) AS Organism
-  FROM read_csv_auto('${KRAKEN_INDEX}')
-  WHERE column3 IN ('S')
-  ORDER BY LOWER(trim(replace(replace(replace(column5, '[', ''), ']', ''), '''', '')));
-`;
+  const {
+    arrow: pathogenArrow,
+    loading: pathogensLoading,
+    error: pathogensError,
+  } = useDuckDbQuery(PATHOGEN_SQL);
 
-  const { arrow: panelArrow, loading: loadingPanels, error: panelError } = useDuckDbQuery(panelSql);
-  const { arrow: pathogenArrow, loading: loadingPathogens, error: pathogenError } = useDuckDbQuery(pathogenSql);
+  const isLoading = panelsLoading || pathogensLoading;
 
-  // Parse the panels, and from them derive the complete set of panel options.
-  React.useEffect(() => {
-    if (panelArrow) {
-      const rows = panelArrow.toArray ? panelArrow.toArray() : [];
-      const panels: Panel[] = rows.map((row: { name: string; pathogenIds: string[] }) => ({
-        id: row.name, // using panel name as unique id
+  // Parse rows (memoized, no extra state or effects)
+  const panelRows = useArrowRows<{ name: string; pathogenIds: string[] }>(panelArrow);
+  const pathogenRows = useArrowRows<{ TaxID: string; Organism: string }>(pathogenArrow);
+
+  const panelOptions: Panel[] = React.useMemo(
+    () =>
+      panelRows.map((row) => ({
+        id: row.name,
         name: row.name,
-        pathogenIds: new Set(row.pathogenIds), // row.pathogenIds should be an array
-      }));
-      setPanelOptions(panels);
-    }
-  }, [panelArrow]);
+        pathogenIds: row.pathogenIds ?? [],
+      })),
+    [panelRows]
+  );
 
-
-  // Parse the pathogens.
-  React.useEffect(() => {
-    if (pathogenArrow) {
-      const rows = pathogenArrow.toArray ? pathogenArrow.toArray() : [];
-      const pathogens: Pathogen[] = rows.map((row: { TaxID: string; Organism: string }) => ({
-        id: row.TaxID, // using TaxID as unique id
+  const pathogenOptions: Pathogen[] = React.useMemo(
+    () =>
+      pathogenRows.map((row) => ({
+        id: row.TaxID,
         name: row.Organism,
-      }));
-      setPathogenOptions(pathogens);
-    }
-  }, [pathogenArrow]);
+      })),
+    [pathogenRows]
+  );
 
-  // When the selected panel changes, update the form's "pathogens" value.
+  // Keep pathogens in sync when panel changes
+  const selectedPanel = watch("panel") as Panel | undefined;
   React.useEffect(() => {
-    if (selectedPanel && selectedPanel.pathogenIds) {
-      const selectedPathogens = pathogenOptions.filter((option) =>
-        selectedPanel.pathogenIds.has(option.id)
-      );
-      setValue("pathogens", selectedPathogens);
-    } else {
-      setValue("pathogens", []); // Clear selection if no panel is selected.
+    if (!selectedPanel) {
+      setValue("pathogens", [], { shouldDirty: true, shouldValidate: true });
+      return;
     }
-  }, [selectedPanel, setValue, pathogenOptions]);
+    const idSet = new Set(selectedPanel.pathogenIds);
+    const selectedPathogens = pathogenOptions.filter((p) => idSet.has(p.id));
+    setValue("pathogens", selectedPathogens, { shouldDirty: true, shouldValidate: true });
+  }, [selectedPanel, pathogenOptions, setValue]);
 
-  if (loadingPanels || loadingPathogens) {
-    return;
-  }
+  // Loading / error states
+  if (isLoading) return null; // Let parent show a skeleton/spinner; avoids layout shift here
 
-  if (panelError || pathogenError) {
-    return <div>Error loading data: {
-      panelError?.message}</div>;
+  if (panelsError || pathogensError) {
+    return (
+      <div className="text-sm text-red-600">
+        Error loading data: {panelsError?.message || pathogensError?.message}
+      </div>
+    );
   }
 
   return (
@@ -123,16 +148,16 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
           <FormLabel>
             Pathogen(s)
             <HoverCard>
-              <HoverCardTrigger>
+              <HoverCardTrigger aria-label="Learn about panels and organisms" className="ml-2 inline-flex">
                 <HelpCircleIcon className="h-4" />
               </HoverCardTrigger>
-              <HoverCardContent className="w-80 ">
+              <HoverCardContent className="w-80">
                 <div className="flex justify-between space-x-4">
                   <div className="flex flex-col gap-4 text-sm">
                     <div>
-                      <strong className="font-semibold">Panels:</strong> Panels are pre-selected groups of pathogens curated for specific purposes. These are pulled from the{" "}
+                      <strong className="font-semibold">Panels:</strong> Panels are pre-selected groups of pathogens curated for specific purposes. These are pulled from the {" "}
                       <a
-                        href={APDB_RAW}
+                        href={APDB_RAW_URL}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500 underline hover:text-blue-600"
@@ -141,9 +166,9 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
                       </a>.
                     </div>
                     <div>
-                      <strong className="font-semibold">Organisms:</strong> Organisms are sourced from the Kraken index used to generate the panels. You can find more details at the{" "}
+                      <strong className="font-semibold">Organisms:</strong> Organisms are sourced from the Kraken index used to generate the panels. You can find more details at the {" "}
                       <a
-                        href={KRAKEN_INDEX}
+                        href={KRAKEN_INDEX_URL}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500 underline hover:text-blue-600"
@@ -156,13 +181,14 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
               </HoverCardContent>
             </HoverCard>
           </FormLabel>
+
           <FormDescription>
             Screen individual pathogens or choose from a pre-selected panel of pathogens.
           </FormDescription>
 
           <div className="flex items-center space-x-2">
-            <FormSwitch name="toggleDetected" />
-            <FormLabel htmlFor="only-detected">Only detected</FormLabel>
+            <FormSwitch name="toggleDetected" id="toggleDetected" />
+            <FormLabel htmlFor="toggleDetected">Only detected</FormLabel>
           </div>
 
           <FormCombobox
@@ -175,7 +201,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
           <FormCombobox
             name="pathogens"
             title="Select pathogen(s)"
-            items={pathogenOptions} // Always show all derived options.
+            items={pathogenOptions}
             multiple
           />
 
@@ -184,8 +210,8 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
             Choose a minimum inclusive threshold for pathogen detection.
           </FormDescription>
           <div className="flex items-center space-x-2">
-            <FormInput name="numericalThreshold" label="Num (#)" type="number" />
-            <FormInput name="percentThreshold" label="Percent (%)" type="number" inputMode="numeric"/>
+            <FormInput name="numericalThreshold" label="Num (#)" type="number" inputMode="numeric" min={0} step="1" />
+            <FormInput name="percentThreshold" label="Percent (%)" type="number" inputMode="numeric" min={0} max={100} step="0.01" />
           </div>
         </div>
 
@@ -193,4 +219,9 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
       </SidebarContent>
     </Sidebar>
   );
-}
+};
+
+// Memoize to avoid unnecessary re-renders
+const SideBarForm = React.memo(SideBarFormComponent);
+export default SideBarForm;
+export { SideBarForm };
