@@ -185,7 +185,7 @@ export function SideBarForm({ ...props }: SideBarFormProps) {
           </FormDescription>
           <div className="flex items-center space-x-2">
             <FormInput name="numericalThreshold" label="Num (#)" type="number" />
-            <FormInput name="percentThreshold" label="Percent (%)" type="number" />
+            <FormInput name="percentThreshold" label="Percent (%)" type="number" inputMode="numeric"/>
           </div>
         </div>
 
