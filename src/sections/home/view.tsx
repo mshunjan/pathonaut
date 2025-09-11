@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import * as React from "react";
 import { TextAnimate } from "@/components/magicui/text-animate";
@@ -16,6 +17,34 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SideBarForm } from "./side-bar-form";
 
+// -------------------------
+// Form schema
+// -------------------------
+// The panel field can be a string (id) or the full object depending on FormCombobox settings.
+
+const PathogenSchema = z.object({ id: z.string(), name: z.string() });
+
+const PanelSchema = z.union([
+  z.string(),
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    pathogenIds: z.array(z.string()).optional(),
+  }),
+]).nullable(); // <- allow null
+
+const formSchema = z.object({
+  files: z.array(z.custom<File>()).min(1, "Please select at least one file"),
+  selectedData: z.array(z.custom<File>()),
+  panel: PanelSchema,
+  pathogens: PathogenSchema.array(),
+  toggleDetected: z.boolean(),
+  numericalThreshold: z.coerce.number().min(0),
+  percentThreshold: z.coerce.number().int().min(0).max(100),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
 function HomeContent() {
   const [columns, setColumns] = React.useState<ColumnDef<unknown>[]>([]);
   const { db, loading: dbLoading, error } = useDuckDb();
@@ -25,62 +54,36 @@ function HomeContent() {
 
   const { toggleSidebar } = useSidebar();
 
-  const formSchema = z.object({
-    files: z
-      .array(z.custom<File>())
-      .min(1, "Please select at least one file"),
-    selectedData: z
-      .array(z.custom<File>()),
-    panel: z.string(),
-    pathogens: z.array(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-      })
-    ),
-    toggleDetected: z.boolean(),
-    numericalThreshold: z.coerce.number().min(0),
-    percentThreshold: z.coerce.number().min(0).max(100),
-  });
-
-  type FormValues = z.infer<typeof formSchema>;
-
-
-  const methods = useForm({
+  const methods = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       files: [],
       selectedData: [],
       toggleDetected: true,
-      panel: "",
+      panel: null,
       pathogens: [],
-      numericalThreshold: 0,
-      percentThreshold: 1,
+      numericalThreshold: 1,
+      percentThreshold: 0,
     },
   });
 
   const onSubmit = React.useCallback(
     async (data: FormValues) => {
-
-      // Check if any files are selected
-      if (data.files.length > 0 && firstStepTriggered == false) {
+      if (data.files.length > 0 && firstStepTriggered === false) {
         if (!db || dbLoading || error) return;
-
         setLoading(true);
         const result = await handleFileSubmit(db, data.files);
         if (result) {
           setTable(result.table);
           setColumns(result.columns);
           toast.success("Table loaded successfully");
-          toggleSidebar()
-          setFirstStepTriggered(true)
-        }
-        else {
+          toggleSidebar();
+          setFirstStepTriggered(true);
+        } else {
           toast.error("Table could not be loaded");
         }
         setLoading(false);
       }
-
     },
     [db, dbLoading, error, toggleSidebar, firstStepTriggered]
   );
@@ -105,29 +108,33 @@ function HomeContent() {
         {welcomeMessage}
         <div className="w-full max-w-2xl flex flex-col gap-4">
           <FormFileSelect name="files" />
-
         </div>
       </div>
-    ), [welcomeMessage]);
+    ),
+    [welcomeMessage]
+  );
 
+  // Watch only what we need
   const { toggleDetected, pathogens, numericalThreshold, percentThreshold } = methods.watch();
 
+  // Normalize comparison types (IDs can be numbers or strings depending on source)
   const filteredData = React.useMemo(() => {
-    if (!table) return [];
+    if (!table) return [] as any[];
     const allRows = table.toArray();
     if (!toggleDetected) return allRows;
 
-    return allRows.filter((row) => {
-      if (
-        pathogens.length > 0 &&
-        !pathogens.some((p: { id: string }) => p.id === row.taxonomyId)
-      ) {
+    // Fast membership check for selected pathogens
+    const selectedIds = new Set((pathogens ?? []).map((p) => String(p.id)));
+
+    return allRows.filter((row: any) => {
+      if (selectedIds.size > 0) {
+        const rowId = String((row as any).taxonomyId ?? (row as any).taxId ?? (row as any).TaxID ?? "");
+        if (!selectedIds.has(rowId)) return false;
+      }
+      if (typeof row.numericAbundance === "number" && row.numericAbundance < numericalThreshold) {
         return false;
       }
-      if (row.numericAbundance < numericalThreshold) {
-        return false;
-      }
-      if (row.percentAbundance < percentThreshold) {
+      if (typeof row.percentAbundance === "number" && row.percentAbundance < percentThreshold) {
         return false;
       }
       return true;
@@ -135,13 +142,10 @@ function HomeContent() {
   }, [table, toggleDetected, pathogens, numericalThreshold, percentThreshold]);
 
   const dataTable = React.useMemo(
-    () => (<div className="w-full flex-1 flex flex-col px-20 overflow-x-auto">
-      <DataTable
-        columns={columns}
-        data={filteredData || []}
-        loading={loading}
-      />
-    </div>
+    () => (
+      <div className="w-full flex-1 flex flex-col px-20 overflow-x-auto">
+        <DataTable columns={columns} data={filteredData || []} loading={loading} />
+      </div>
     ),
     [columns, filteredData, loading]
   );
